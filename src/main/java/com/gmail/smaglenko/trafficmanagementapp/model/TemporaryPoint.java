@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class TemporaryPoint {
     private double latitude;
     private double longitude;
-    private int altitude;
-    private int speed;
-    private int heading;
+    private double height;
+    private double speed;
+    private double course;
 }
