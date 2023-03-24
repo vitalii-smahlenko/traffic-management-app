@@ -8,4 +8,6 @@ import java.util.List;
 public interface PlaneCalculation {
     List<TemporaryPoint> calculateRoute(AirplaneCharacteristics characteristics,
                                         List<WayPoint> wayPoints);
+
+    double durationFlight(List<WayPoint> wayPoints);
 }

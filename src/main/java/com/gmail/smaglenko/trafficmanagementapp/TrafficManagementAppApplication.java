@@ -53,13 +53,40 @@ public class TrafficManagementAppApplication {
             thirdWayPointForAirplane1.setSpeed(120);
 
             List<WayPoint> wayPointsForAirplane1 = new ArrayList<>();
-            wayPointsForAirplane1.add()
+            wayPointsForAirplane1.add(firstWayPointForAirplane1);
+            wayPointsForAirplane1.add(secondWayPointForAirplane1);
+            wayPointsForAirplane1.add(thirdWayPointForAirplane1);
 
-            planeCalculation.calculateRoute()
+            List<TemporaryPoint> temporaryPointsFroAirplane1 = planeCalculation
+                    .calculateRoute(airplane1Characteristics, wayPointsForAirplane1);
 
-            airplane1.setCharacteristics();
-            airplane1.setPosition();
-            airplane1.getFlights();
+            Flight flight1 = new Flight();
+            flight1.setNumber(1L);
+            flight1.setWayPoints(wayPointsForAirplane1);
+            flight1.setTemporaryPoints(temporaryPointsFroAirplane1);
+
+            airplane1.setCharacteristics(airplane1Characteristics);
+            airplane1.setPosition(temporaryPointsFroAirplane1.get(0));
+            airplane1.getFlights().add(flight1);
+
+            airplane1 = aircraftService.add(airplane1);
+
+            double durationFlight1 = planeCalculation.durationFlight(wayPointsForAirplane1);
+
+            System.out.println("Number of flights performed "+  airplane1.getFlights().size()
+                    + " total time " + durationFlight1);
+
+
+            Flight flight2 = new Flight();
+            flight2.setNumber(2L);
+            flight2.setWayPoints(wayPointsForAirplane1);
+            flight2.setTemporaryPoints(temporaryPointsFroAirplane1);
+            airplane1.getFlights().add(flight1);
+
+            airplane1 = aircraftService.add(airplane1);
+
+            System.out.println("Number of flights performed "+  airplane1.getFlights().size()
+                    + " total time " + (planeCalculation.durationFlight(wayPointsForAirplane1) + durationFlight1));
         };
     }
 

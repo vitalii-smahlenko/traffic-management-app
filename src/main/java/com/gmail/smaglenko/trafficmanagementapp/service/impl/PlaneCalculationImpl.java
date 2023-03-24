@@ -10,63 +10,71 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PlaneCalculationImpl implements PlaneCalculation {
+    private static final double EARTH_RADIUS = 6371.0; // Радіус Землі в км
+
     public List<TemporaryPoint> calculateRoute(AirplaneCharacteristics characteristics,
                                                List<WayPoint> wayPoints) {
-        // Ініціалізація тимчасових змінних
         List<TemporaryPoint> temporaryPoints = new ArrayList<>();
         TemporaryPoint currentPosition = new TemporaryPoint(wayPoints.get(0).getLatitude(),
                 wayPoints.get(0).getLongitude(), wayPoints.get(0).getHeight(), 0, 0);
         double currentSpeed = 0;
         double currentCourse = 0;
         double timeInterval = 1;
-        double earthRadius = 6371.0; // Радіус Землі в км
-        // Обробка кожної точки маршруту
         for (int i = 1; i < wayPoints.size(); i++) {
             WayPoint currentWayPoint = wayPoints.get(i);
             WayPoint previousWayPoint = wayPoints.get(i - 1);
             double distance = calculateDistance(currentPosition.getLatitude(),
                     currentPosition.getLongitude(), currentWayPoint.getLatitude(),
-                    currentWayPoint.getLongitude(), earthRadius);
-            double time = distance / currentSpeed;
+                    currentWayPoint.getLongitude());
             double requiredAltitude = currentWayPoint.getHeight();
             double requiredSpeed = currentWayPoint.getSpeed();
-            double requiredCourse = calculateCourse(currentPosition.getLatitude(),
+            double requiredCourseRadians = calculateCourse(currentPosition.getLatitude(),
                     currentPosition.getLongitude(), currentWayPoint.getLatitude(),
                     currentWayPoint.getLongitude());
+            currentCourse = requiredCourseRadians;
             double acceleration = characteristics.getMaxAcceleration();
             double maxSpeed = characteristics.getMaxSpeed();
-            // Обчислення максимальної швидкості, яку може розвинути літак на цій ділянці маршруту
-            double maxPossibleSpeed = Math.min(maxSpeed, Math.sqrt(currentSpeed * currentSpeed
-                    + 2 * acceleration * distance));
-            // Перевірка можливості розвинути необхідну швидкість на даній ділянці маршруту
-            if (requiredSpeed > maxPossibleSpeed) {
-                // Якщо швидкість недостатня, потрібно прискоритися
-                while (currentSpeed < requiredSpeed) {
-                    currentSpeed += acceleration * timeInterval;
-                    currentSpeed = Math.min(currentSpeed, maxPossibleSpeed);
-                    double currentAltitude = currentPosition.getHeight();
-                    double altitudeChange = requiredAltitude - currentAltitude;
-                    double altitudeSpeed = characteristics.getMaxSpeed();
-                    currentPosition = move(currentPosition, requiredCourse, currentSpeed,
-                            altitudeSpeed, altitudeChange, timeInterval, earthRadius);
-                    temporaryPoints.add(currentPosition);
-                }
-            } else {
-                // Якщо швидкість достатня, потрібно підтримувати її
+            double maxPossibleSpeed = Math.sqrt(currentSpeed * currentSpeed + 2 * acceleration * distance);
+            if (currentSpeed == 0 || requiredSpeed == 0 || requiredAltitude != currentPosition.getHeight()) {
+                // Якщо швидкість нуль або швидкість або висота не співпадають, потрібно прискоритися до вимог маршруту
                 currentSpeed = requiredSpeed;
-                double currentAltitude = currentPosition.getHeight();
-                double altitudeChange = requiredAltitude - currentAltitude;
-                double altitudeSpeed = characteristics.getMaxSpeed();
-                currentPosition = move(currentPosition, requiredCourse, currentSpeed, altitudeSpeed,
-                        altitudeChange, time, earthRadius);
-                temporaryPoints.add(currentPosition);
+            } else if (requiredSpeed > currentSpeed) {
+                // Якщо потрібна більша швидкість, прискорити до неї
+                double maxAchievableSpeed = Math.min(maxSpeed, Math.sqrt(currentSpeed * currentSpeed + 2 * acceleration * distance));
+                currentSpeed = Math.min(maxAchievableSpeed, requiredSpeed);
+            } else {
+                // Якщо потрібна менша швидкість, сповільнити до неї
+                double minAchievableSpeed = Math.sqrt(currentSpeed * currentSpeed - 2 * acceleration * distance);
+                currentSpeed = Math.max(minAchievableSpeed, requiredSpeed);
             }
+            double time = distance / currentSpeed;
+            double currentAltitude = currentPosition.getHeight();
+            double altitudeChange = requiredAltitude - currentAltitude;
+            double altitudeSpeed = characteristics.getMaxSpeed();
+            currentPosition = move(currentPosition, requiredCourseRadians, currentSpeed, altitudeSpeed,
+                    altitudeChange, time);
+            currentPosition.setSpeed(currentSpeed);
+            currentPosition.setCourse(currentCourse);
+            temporaryPoints.add(currentPosition);
         }
         return temporaryPoints;
     }
 
-    private double calculateDistance(double startLat, double startLon, double endLat, double endLon,
-                                     double earthRadius) {
+    public double durationFlight(List<WayPoint> wayPoints){
+        double totalFlightTime = 0;
+        for (int i = 1; i < wayPoints.size(); i++) {
+            WayPoint currentWayPoint = wayPoints.get(i);
+            WayPoint previousWayPoint = wayPoints.get(i - 1);
+            double distance = calculateDistance(previousWayPoint.getLatitude(),
+                    previousWayPoint.getLongitude(), currentWayPoint.getLatitude(),
+                    currentWayPoint.getLongitude());
+            double time = distance / currentWayPoint.getSpeed();
+            totalFlightTime += time;
+        }
+        return totalFlightTime;
+    }
+
+    private double calculateDistance(double startLat, double startLon, double endLat, double endLon) {
         // Переведення координат у радіани
         double lat1 = Math.toRadians(startLat);
         double lon1 = Math.toRadians(startLon);
@@ -80,7 +88,7 @@ public class PlaneCalculationImpl implements PlaneCalculation {
                 Math.cos(lat1) * Math.cos(lat2) *
                         Math.pow(Math.sin(dLon / 2), 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return earthRadius * c;
+        return EARTH_RADIUS * c;
     }
 
     private double calculateCourse(double startLat, double startLon, double endLat, double endLon) {
@@ -102,7 +110,7 @@ public class PlaneCalculationImpl implements PlaneCalculation {
 
     private TemporaryPoint move(TemporaryPoint currentPosition, double course, double speed,
                                 double altitudeSpeed, double altitudeChange,
-                                double timeInterval, double earthRadius) {
+                                double timeInterval) {
         // Переведення курсу в радіани
         double radianCourse = Math.toRadians(course);
         // Обчислення зміни висоти за час timeInterval
@@ -113,7 +121,7 @@ public class PlaneCalculationImpl implements PlaneCalculation {
         double distance = speed * timeInterval;
         double lat1 = Math.toRadians(currentPosition.getLatitude());
         double lon1 = Math.toRadians(currentPosition.getLongitude());
-        double angularDistance = distance / earthRadius;
+        double angularDistance = distance / EARTH_RADIUS;
         double lat2 = Math.asin(Math.sin(lat1) * Math.cos(angularDistance) +
                 Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(radianCourse));
         double lon2 = lon1 + Math.atan2(Math.sin(radianCourse) * Math.sin(angularDistance)
