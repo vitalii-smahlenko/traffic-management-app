@@ -18,11 +18,8 @@ public class SequenceGeneratorServiceImpl implements SequenceGeneratorService {
 
     @Override
     public Long getSequenceNumber(String sequenceName) {
-        //get sequence no
         Query query = new Query(Criteria.where("id").is(sequenceName));
-        //update the sequence no
         Update update = new Update().inc("seq", 1);
-        //modify in document
         DbSequence counter = mongoOperations
                 .findAndModify(query,
                         update, options().returnNew(true).upsert(true),
