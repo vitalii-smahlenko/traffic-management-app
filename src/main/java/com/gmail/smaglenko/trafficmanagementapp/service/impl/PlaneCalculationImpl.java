@@ -37,8 +37,7 @@ public class PlaneCalculationImpl implements PlaneCalculation {
                     * distance);
             if (currentSpeed == 0 || requiredSpeed == 0
                     || requiredAltitude != currentPosition.getAltitude()) {
-                // Якщо швидкість нуль або швидкість або висота не співпадають,
-                // потрібно прискоритися до вимог маршруту
+                // Якщо швидкість нуль або швидкість або висота не співпадають, потрібно прискоритися до вимог маршруту
                 currentSpeed = requiredSpeed;
             } else if (requiredSpeed > currentSpeed) {
                 // Якщо потрібна більша швидкість, прискорити до неї
@@ -118,7 +117,7 @@ public class PlaneCalculationImpl implements PlaneCalculation {
                                 double altitudeSpeed, double altitudeChange, double timeInterval) {
         // Переведення курсу в радіани
         double radianCourse = Math.toRadians(course);
-        // Обчислення зміни висоти за час timeInterval
+        // Обчислення зміни висоти за час
         double altitudeChangePerInterval = altitudeSpeed * timeInterval;
         double newHeight = currentPosition.getAltitude() + altitudeChange;
         double climbRate = altitudeChange / timeInterval;
