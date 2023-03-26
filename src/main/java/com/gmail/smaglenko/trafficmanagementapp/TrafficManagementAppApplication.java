@@ -26,68 +26,52 @@ public class TrafficManagementAppApplication {
     @Bean
     CommandLineRunner run(AircraftService aircraftService, PlaneCalculation planeCalculation) {
         return args -> {
-            Aircraft airplane1 = new Airplane();
-
-            AirplaneCharacteristics airplane1Characteristics = new AirplaneCharacteristics();
-            airplane1Characteristics.setTurnRate(200);
-            airplane1Characteristics.setMaxSpeed(150);
-            airplane1Characteristics.setMaxAcceleration(100);
-            airplane1Characteristics.setClimbRate(10);
-
-            WayPoint firstWayPointForAirplane1 = new WayPoint();
-            firstWayPointForAirplane1.setLatitude(30.514612);
-            firstWayPointForAirplane1.setLongitude(50.530600);
-            firstWayPointForAirplane1.setHeight(1000);
-            firstWayPointForAirplane1.setSpeed(120);
-
-            WayPoint secondWayPointForAirplane1 = new WayPoint();
-            secondWayPointForAirplane1.setLatitude(30.514605);
-            secondWayPointForAirplane1.setLongitude(50.515705);
-            secondWayPointForAirplane1.setHeight(1000);
-            secondWayPointForAirplane1.setSpeed(120);
-
-            WayPoint thirdWayPointForAirplane1 = new WayPoint();
-            thirdWayPointForAirplane1.setLatitude(30.500160);
-            thirdWayPointForAirplane1.setLongitude(50.516652);
-            thirdWayPointForAirplane1.setHeight(1000);
-            thirdWayPointForAirplane1.setSpeed(120);
-
-            List<WayPoint> wayPointsForAirplane1 = new ArrayList<>();
-            wayPointsForAirplane1.add(firstWayPointForAirplane1);
-            wayPointsForAirplane1.add(secondWayPointForAirplane1);
-            wayPointsForAirplane1.add(thirdWayPointForAirplane1);
-
-            List<TemporaryPoint> temporaryPointsFroAirplane1 = planeCalculation
-                    .calculateRoute(airplane1Characteristics, wayPointsForAirplane1);
-
-            Flight flight1 = new Flight();
-            flight1.setNumber(1L);
-            flight1.setWayPoints(wayPointsForAirplane1);
-            flight1.setTemporaryPoints(temporaryPointsFroAirplane1);
-
-            airplane1.setCharacteristics(airplane1Characteristics);
-            airplane1.setPosition(temporaryPointsFroAirplane1.get(0));
-            airplane1.getFlights().add(flight1);
-
-            airplane1 = aircraftService.add(airplane1);
-
-            double durationFlight1 = planeCalculation.durationFlight(wayPointsForAirplane1);
-
-            System.out.println("Number of flights performed "+  airplane1.getFlights().size()
-                    + " total time " + durationFlight1);
-
-
-            Flight flight2 = new Flight();
-            flight2.setNumber(2L);
-            flight2.setWayPoints(wayPointsForAirplane1);
-            flight2.setTemporaryPoints(temporaryPointsFroAirplane1);
-            airplane1.getFlights().add(flight1);
-
-            airplane1 = aircraftService.add(airplane1);
-
-            System.out.println("Number of flights performed "+  airplane1.getFlights().size()
-                    + " total time " + (planeCalculation.durationFlight(wayPointsForAirplane1) + durationFlight1));
+            for (int i = 0; i < 3; i++) {
+                Aircraft airplane = new Airplane();
+                AirplaneCharacteristics airplane1Characteristics = new AirplaneCharacteristics
+                        (200, 150, 100, 10);
+                airplane.setCharacteristics(airplane1Characteristics);
+                aircraftService.add(airplane);
+            }
         };
     }
 
+    @Bean
+    CommandLineRunner start(AircraftService aircraftService, PlaneCalculation planeCalculation) {
+        return args -> {
+            List<Aircraft> aircrafts = aircraftService.findAll();
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < aircrafts.size(); j++) {
+                    WayPoint firstWayPoint
+                            = new WayPoint(30.514612 + j, 50.530600 + j,
+                            1000, 120);
+                    WayPoint secondWayPoint
+                            = new WayPoint(30.514605 + j, 50.515705 + j,
+                            1000, 120);
+                    WayPoint thirdWayPoint
+                            = new WayPoint(30.500160 + j, 50.516652 + j,
+                            1000, 120);
+                    List<WayPoint> wayPoints = new ArrayList<>();
+                    wayPoints.add(firstWayPoint);
+                    wayPoints.add(secondWayPoint);
+                    wayPoints.add(thirdWayPoint);
+                    List<TemporaryPoint> temporaryPoints = planeCalculation
+                            .calculateRoute(aircrafts.get(j).getCharacteristics(), wayPoints);
+                    Flight flight = new Flight();
+                    flight.setNumber((long) i + 1);
+                    flight.setWayPoints(wayPoints);
+                    flight.setTemporaryPoints(temporaryPoints);
+                    flight.setDurationFlight(planeCalculation.durationFlight(wayPoints));
+                    aircrafts.get(j).getFlights().add(flight);
+                    Aircraft update = aircraftService.update(aircrafts.get(j));
+                    double durationFlight = update.getFlights().stream()
+                            .mapToDouble(Flight::getDurationFlight)
+                            .sum();
+                    System.out.format("%d plain. Number of flights performed %d, "
+                                    + "duration of flight time %.19f minutes.\n",
+                            j + 1, aircrafts.get(j).getFlights().size(), durationFlight);
+                }
+            }
+        };
+    }
 }

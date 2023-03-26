@@ -13,4 +13,5 @@ public class Flight {
     private Long number;
     private List<WayPoint> wayPoints = new ArrayList<>();
     private List<TemporaryPoint> temporaryPoints = new ArrayList<>();
+    private double durationFlight;
 }

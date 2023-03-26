@@ -16,17 +16,16 @@ public class PlaneCalculationImpl implements PlaneCalculation {
                                                List<WayPoint> wayPoints) {
         List<TemporaryPoint> temporaryPoints = new ArrayList<>();
         TemporaryPoint currentPosition = new TemporaryPoint(wayPoints.get(0).getLatitude(),
-                wayPoints.get(0).getLongitude(), wayPoints.get(0).getHeight(), 0, 0);
+                wayPoints.get(0).getLongitude(), wayPoints.get(0).getAltitude(), 0, 0);
         double currentSpeed = 0;
         double currentCourse = 0;
-        double timeInterval = 1;
         for (int i = 1; i < wayPoints.size(); i++) {
             WayPoint currentWayPoint = wayPoints.get(i);
             WayPoint previousWayPoint = wayPoints.get(i - 1);
             double distance = calculateDistance(currentPosition.getLatitude(),
                     currentPosition.getLongitude(), currentWayPoint.getLatitude(),
                     currentWayPoint.getLongitude());
-            double requiredAltitude = currentWayPoint.getHeight();
+            double requiredAltitude = currentWayPoint.getAltitude();
             double requiredSpeed = currentWayPoint.getSpeed();
             double requiredCourseRadians = calculateCourse(currentPosition.getLatitude(),
                     currentPosition.getLongitude(), currentWayPoint.getLatitude(),
@@ -34,25 +33,30 @@ public class PlaneCalculationImpl implements PlaneCalculation {
             currentCourse = requiredCourseRadians;
             double acceleration = characteristics.getMaxAcceleration();
             double maxSpeed = characteristics.getMaxSpeed();
-            double maxPossibleSpeed = Math.sqrt(currentSpeed * currentSpeed + 2 * acceleration * distance);
-            if (currentSpeed == 0 || requiredSpeed == 0 || requiredAltitude != currentPosition.getHeight()) {
-                // Якщо швидкість нуль або швидкість або висота не співпадають, потрібно прискоритися до вимог маршруту
+            double maxPossibleSpeed = Math.sqrt(currentSpeed * currentSpeed + 2 * acceleration
+                    * distance);
+            if (currentSpeed == 0 || requiredSpeed == 0
+                    || requiredAltitude != currentPosition.getAltitude()) {
+                // Якщо швидкість нуль або швидкість або висота не співпадають,
+                // потрібно прискоритися до вимог маршруту
                 currentSpeed = requiredSpeed;
             } else if (requiredSpeed > currentSpeed) {
                 // Якщо потрібна більша швидкість, прискорити до неї
-                double maxAchievableSpeed = Math.min(maxSpeed, Math.sqrt(currentSpeed * currentSpeed + 2 * acceleration * distance));
+                double maxAchievableSpeed = Math.min(maxSpeed,
+                        Math.sqrt(currentSpeed * currentSpeed + 2 * acceleration * distance));
                 currentSpeed = Math.min(maxAchievableSpeed, requiredSpeed);
             } else {
                 // Якщо потрібна менша швидкість, сповільнити до неї
-                double minAchievableSpeed = Math.sqrt(currentSpeed * currentSpeed - 2 * acceleration * distance);
+                double minAchievableSpeed
+                        = Math.sqrt(currentSpeed * currentSpeed - 2 * acceleration * distance);
                 currentSpeed = Math.max(minAchievableSpeed, requiredSpeed);
             }
             double time = distance / currentSpeed;
-            double currentAltitude = currentPosition.getHeight();
+            double currentAltitude = currentPosition.getAltitude();
             double altitudeChange = requiredAltitude - currentAltitude;
             double altitudeSpeed = characteristics.getMaxSpeed();
-            currentPosition = move(currentPosition, requiredCourseRadians, currentSpeed, altitudeSpeed,
-                    altitudeChange, time);
+            currentPosition = move(currentPosition, requiredCourseRadians, currentSpeed,
+                    altitudeSpeed, altitudeChange, time);
             currentPosition.setSpeed(currentSpeed);
             currentPosition.setCourse(currentCourse);
             temporaryPoints.add(currentPosition);
@@ -60,7 +64,7 @@ public class PlaneCalculationImpl implements PlaneCalculation {
         return temporaryPoints;
     }
 
-    public double durationFlight(List<WayPoint> wayPoints){
+    public double durationFlight(List<WayPoint> wayPoints) {
         double totalFlightTime = 0;
         for (int i = 1; i < wayPoints.size(); i++) {
             WayPoint currentWayPoint = wayPoints.get(i);
@@ -68,13 +72,15 @@ public class PlaneCalculationImpl implements PlaneCalculation {
             double distance = calculateDistance(previousWayPoint.getLatitude(),
                     previousWayPoint.getLongitude(), currentWayPoint.getLatitude(),
                     currentWayPoint.getLongitude());
-            double time = distance / currentWayPoint.getSpeed();
+            double time = distance / (currentWayPoint.getSpeed() / 60.0);
             totalFlightTime += time;
         }
         return totalFlightTime;
     }
 
-    private double calculateDistance(double startLat, double startLon, double endLat, double endLon) {
+
+    private double calculateDistance(double startLat, double startLon, double endLat,
+                                     double endLon) {
         // Переведення координат у радіани
         double lat1 = Math.toRadians(startLat);
         double lon1 = Math.toRadians(startLon);
@@ -109,13 +115,12 @@ public class PlaneCalculationImpl implements PlaneCalculation {
     }
 
     private TemporaryPoint move(TemporaryPoint currentPosition, double course, double speed,
-                                double altitudeSpeed, double altitudeChange,
-                                double timeInterval) {
+                                double altitudeSpeed, double altitudeChange, double timeInterval) {
         // Переведення курсу в радіани
         double radianCourse = Math.toRadians(course);
         // Обчислення зміни висоти за час timeInterval
         double altitudeChangePerInterval = altitudeSpeed * timeInterval;
-        double newHeight = currentPosition.getHeight() + altitudeChange;
+        double newHeight = currentPosition.getAltitude() + altitudeChange;
         double climbRate = altitudeChange / timeInterval;
         // Обчислення переміщення вздовж широти та довготи
         double distance = speed * timeInterval;

@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 public class WayPoint {
     private double latitude;
     private double longitude;
-    private double height;
+    private double altitude;
     private double speed;
 }
